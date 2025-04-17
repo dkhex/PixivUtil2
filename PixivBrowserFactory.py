@@ -822,15 +822,16 @@ class PixivBrowser(mechanize.Browser):
             if response is None:
                 try:
                     res = self.open_with_retry(url)
-                    response = res.read()
+                    response_str = res.read()
                     res.close()
+                    response = json.loads(response_str)
                 except urllib.error.HTTPError as ex:
                     if ex.code == 404:
                         response = ex.read()
                 self._put_to_cache(url, response)
 
             PixivHelper.get_logger().debug(response)
-            artist = PixivArtist(member_id, response, False, offset, limit)
+            artist = PixivArtist(member_id, response["body"], False, offset, limit)
 
             # fix issue with member with 0 images, skip everything.
             if len(artist.imageList) == 0 and throw_empty_error:

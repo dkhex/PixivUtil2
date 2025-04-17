@@ -78,17 +78,17 @@ class PixivArtist:
                     self.artistToken = root["user_account"]
                     self.artistName = root["user_name"]
                 else:
-                    # https://app-api.pixiv.net/v1/user/detail?user_id=1039353
+                    # https://www.pixiv.net/ajax/user/1039353
                     data = None
-                    if "user" in page:
-                        data = page
-                    elif "illusts" in page and len(page["illusts"]) > 0:
-                        data = page["illusts"][0]
+                    if "pickup" in page and len(page["pickup"]) > 0:
+                        data = page["pickup"][0]
 
                     if data is not None:
-                        self.artistId = data["user"]["id"]
-                        self.artistToken = data["user"]["account"]
-                        self.artistName = data["user"]["name"]
+                        self.artistId = data["userId"]
+                        # HELP: No unique name visible from this payload.
+                        # Necessary substitution must be found (maybe from first image?).
+                        self.artistToken = "broken_feature"
+                        self.artistName = data["userName"]
 
                         avatar_data = data["user"]["profile_image_urls"]
                         if avatar_data is not None and "medium" in avatar_data:

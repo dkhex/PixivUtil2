@@ -254,7 +254,7 @@ class PixivBrowser(mechanize.Browser):
                     try:
                         temp = self.open_with_retry(req)
                         read_page = temp.read()
-                        read_page = read_page.decode('utf8')
+                        read_page = read_page.decode('utf-8')
                         if enable_cache:
                             self._put_to_cache(url, read_page)
                         temp.close()
@@ -806,13 +806,14 @@ class PixivBrowser(mechanize.Browser):
             # https://www.pixiv.net/ajax/user/5238/illustmanga/tag?tag=R-18&offset=0&limit=48
             # https://www.pixiv.net/ajax/user/1813972/profile/all
             url = None
-            if len(tags) > 0:  # called from Download by tags
-                url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag={tags}&offset={offset}&limit={limit}'
-            elif r18mode:
-                url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag=R-18&offset={offset}&limit={limit}'
-            else:
-                url = f'https://www.pixiv.net/ajax/user/{member_id}/profile/all'
-                need_to_slice = True
+            # TODO: Find replacement for tag search!
+            #if len(tags) > 0:  # called from Download by tags
+            #    url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag={tags}&offset={offset}&limit={limit}'
+            #elif r18mode:
+            #    url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag=R-18&offset={offset}&limit={limit}'
+            #else:
+            url = f'https://www.pixiv.net/ajax/user/{member_id}/profile/all'
+            need_to_slice = True
 
             PixivHelper.print_and_log('info', f'{Fore.LIGHTGREEN_EX}{"Member Url":14}:{Style.RESET_ALL} {url}')
 

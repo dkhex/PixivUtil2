@@ -29,7 +29,7 @@ class PixivArtist:
         self.offset = offset
         self.limit = limit
         self.artistId = mid
-
+        
         if payload_body is not None:
             # detect if image count != 0
             if not fromImage:
@@ -40,8 +40,6 @@ class PixivArtist:
                 self.isLastPage = True
                 self.haveImages = True
 
-            # parse artist info
-            self.ParseInfo(payload_body, fromImage)
 
     def ParseMangaList(self, payload):
         if payload is not None and "mangaSeries" in payload:
@@ -76,24 +74,8 @@ class PixivArtist:
                     root = page["body"]["novel"]
                     self.artistId = root["user_id"]
                     self.artistToken = root["user_account"]
-                    self.artistName = root["user_name"]
-                else:
-                    # https://www.pixiv.net/ajax/user/1039353
-                    data = None
-                    if "pickup" in page and len(page["pickup"]) > 0:
-                        data = page["pickup"][0]
-
-                    if data is not None:
-                        self.artistId = data["userId"]
-                        # HELP: No unique name visible from this payload.
-                        # Necessary substitution must be found (maybe from first image?).
-                        self.artistToken = "broken_feature"
-                        self.artistName = data["userName"]
-
-                        avatar_data = data["user"]["profile_image_urls"]
-                        if avatar_data is not None and "medium" in avatar_data:
-                            self.artistAvatar = avatar_data["medium"].replace("_170", "")
-
+                    self.artistName = root["user_name"]                        
+                        
                 if "profile" in page:
                     if self.totalImages == 0:
                         if bookmark:

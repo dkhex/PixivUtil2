@@ -845,6 +845,8 @@ class PixivBrowser(mechanize.Browser):
                         raise PixivException(msg, errorCode=PixivException.NOT_LOGGED_IN, htmlPage=errorMessage)
                     elif errorCode == 403:
                         raise PixivException(msg, errorCode=PixivException.USER_ID_SUSPENDED, htmlPage=errorMessage)
+                    elif errorCode == 404:
+                        raise PixivException(msg, errorCode=PixivException.USER_ID_NOT_EXISTS, htmlPage=errorMessage)
                     else:
                         raise PixivException(msg, errorCode=PixivException.OTHER_MEMBER_ERROR, htmlPage=errorMessage)
 

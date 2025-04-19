@@ -37,6 +37,7 @@ class PixivArtist:
                 self.ParseMangaList(payload_body)
                 self.ParseNovelList(payload_body)
             else:
+                self.ParseInfo(page=payload_body, fromImage=fromImage)
                 self.isLastPage = True
                 self.haveImages = True
 
@@ -64,7 +65,7 @@ class PixivArtist:
                 self.ParseInfoFromImage(page)
             else:
                 # used in PixivBrowserFactory.getMemberInfoWhitecube()
-                # webrpc method
+                # webrpc method https://www.pixiv.net/rpc/get_work.php?id=1039353
                 if "body" in page and "illust" in page["body"] and page["body"]["illust"]:
                     root = page["body"]["illust"]
                     self.artistId = root["illust_user_id"]
@@ -74,8 +75,8 @@ class PixivArtist:
                     root = page["body"]["novel"]
                     self.artistId = root["user_id"]
                     self.artistToken = root["user_account"]
-                    self.artistName = root["user_name"]                        
-                        
+                    self.artistName = root["user_name"]
+
                 if "profile" in page:
                     if self.totalImages == 0:
                         if bookmark:
@@ -86,6 +87,7 @@ class PixivArtist:
                         self.artistBackground = page["profile"]["background_image_url"]
 
     def ParseInfoFromImage(self, page):
+        # https://www.pixiv.net/ajax/illust/128949568
         self.artistId = page["userId"]
         self.artistToken = page["userAccount"]
         self.artistName = page["userName"]

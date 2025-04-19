@@ -729,27 +729,28 @@ class PixivBrowser(mechanize.Browser):
                     res.close()
                     info = json.loads(infoStr)
                     self._put_to_cache(url, info)
-            else:
-                PixivHelper.print_and_log('info', f'Using OAuth to retrieve member info for: {member_id}')
-                if not self._username or not self._password:
-                    raise PixivException("Empty Username or Password, remove cookie value and relogin, or add username/password to config.ini.")
-
-                url = f'https://app-api.pixiv.net/v1/user/detail?user_id={member_id}'
-                info = self._get_from_cache(url)
-                if info is None:
-                    PixivHelper.get_logger().debug("Getting member information: %s", member_id)
-                    login_response = self._oauth_manager.login()
-                    if login_response.status_code == 200:
-                        info = json.loads(login_response.text)
-                        if self._config.refresh_token != info["response"]["refresh_token"]:
-                            PixivHelper.print_and_log('info', 'OAuth Refresh Token is updated, updating config.ini')
-                            self._config.refresh_token = info["response"]["refresh_token"]
-                            self._config.writeConfig(path=self._config.configFileLocation)
-
-                    response = self._oauth_manager.get_user_info(member_id)
-                    info = json.loads(response.text)
-                    self._put_to_cache(url, info)
-                    PixivHelper.get_logger().debug("reply: %s", response.text)
+             # TODO: Find substitution for artists without images.
+#            else:
+#                PixivHelper.print_and_log('info', f'Using OAuth to retrieve member info for: {member_id}')
+#                if not self._username or not self._password:
+#                    raise PixivException("Empty Username or Password, remove cookie value and relogin, or add username/password to config.ini.")
+#
+#                url = f'https://app-api.pixiv.net/v1/user/detail?user_id={member_id}'
+#                info = self._get_from_cache(url)
+#                if info is None:
+#                    PixivHelper.get_logger().debug("Getting member information: %s", member_id)
+#                    login_response = self._oauth_manager.login()
+#                    if login_response.status_code == 200:
+#                        info = json.loads(login_response.text)
+#                        if self._config.refresh_token != info["response"]["refresh_token"]:
+#                            PixivHelper.print_and_log('info', 'OAuth Refresh Token is updated, updating config.ini')
+#                            self._config.refresh_token = info["response"]["refresh_token"]
+#                            self._config.writeConfig(path=self._config.configFileLocation)
+#
+#                    response = self._oauth_manager.get_user_info(member_id)
+#                    info = json.loads(response.text)
+#                    self._put_to_cache(url, info)
+#                    PixivHelper.get_logger().debug("reply: %s", response.text)
 
             artist.ParseInfo(info, False, bookmark=bookmark)
 
@@ -801,19 +802,18 @@ class PixivBrowser(mechanize.Browser):
             # https://www.pixiv.net/ajax/user/1039353/illusts/bookmarks?tag=&offset=0&limit=24&rest=show
             url = f'https://www.pixiv.net/ajax/user/{member_id}/illusts/bookmarks?tag={tags}&offset={offset}&limit={limit}&rest=show'
         else:
-            # https://www.pixiv.net/ajax/user/1813972/illusts/tag?tag=Fate%2FGrandOrder?offset=0&limit=24
-            # https://www.pixiv.net/ajax/user/1813972/manga/tag?tag=%E3%83%A1%E3%82%A4%E3%82%AD%E3%83%B3%E3%82%B0?offset=0&limit=24
+            # https://www.pixiv.net/ajax/user/1813972/illustmanga/tag?tag=Fate%2FGrandOrder?offset=0&limit=24
+            # https://www.pixiv.net/ajax/user/1813972/illustmanga/tag?tag=%E3%83%A1%E3%82%A4%E3%82%AD%E3%83%B3%E3%82%B0?offset=0&limit=24
             # https://www.pixiv.net/ajax/user/5238/illustmanga/tag?tag=R-18&offset=0&limit=48
             # https://www.pixiv.net/ajax/user/1813972/profile/all
             url = None
-            # TODO: Find replacement for tag search!
-            #if len(tags) > 0:  # called from Download by tags
-            #    url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag={tags}&offset={offset}&limit={limit}'
-            #elif r18mode:
-            #    url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag=R-18&offset={offset}&limit={limit}'
-            #else:
-            url = f'https://www.pixiv.net/ajax/user/{member_id}/profile/all'
-            need_to_slice = True
+            if len(tags) > 0:  # called from Download by tags
+                url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag={tags}&offset={offset}&limit={limit}'
+            elif r18mode:
+                url = f'https://www.pixiv.net/ajax/user/{member_id}/illustmanga/tag?tag=R-18&offset={offset}&limit={limit}'
+            else:
+                url = f'https://www.pixiv.net/ajax/user/{member_id}/profile/all'
+                need_to_slice = True
 
             PixivHelper.print_and_log('info', f'{Fore.LIGHTGREEN_EX}{"Member Url":14}:{Style.RESET_ALL} {url}')
 
@@ -826,9 +826,28 @@ class PixivBrowser(mechanize.Browser):
                     response_str = res.read()
                     res.close()
                     response = json.loads(response_str)
-                except urllib.error.HTTPError as ex:
-                    if ex.code == 404:
-                        response = ex.read()
+                except urllib.error.HTTPError as error:
+                    errorCode = error.getcode()
+                    errorMessage = error.get_data()
+                    PixivHelper.get_logger().error("Error data: \r\n %s", errorMessage)
+                    payload = demjson3.decode(errorMessage)
+
+                    msg = None
+                    if "message" in payload:
+                        msg = payload["message"]
+                    elif "error" in payload and payload["error"] is not None:
+                        msgs = list()
+                        msgs.append(payload["error"]["user_message"])
+                        msgs.append(payload["error"]["message"])
+                        msgs.append(payload["error"]["reason"])
+                        msg = ",".join(msgs)
+                    if errorCode == 401:
+                        raise PixivException(msg, errorCode=PixivException.NOT_LOGGED_IN, htmlPage=errorMessage)
+                    elif errorCode == 403:
+                        raise PixivException(msg, errorCode=PixivException.USER_ID_SUSPENDED, htmlPage=errorMessage)
+                    else:
+                        raise PixivException(msg, errorCode=PixivException.OTHER_MEMBER_ERROR, htmlPage=errorMessage)
+
                 self._put_to_cache(url, response)
 
             PixivHelper.get_logger().debug(response)
